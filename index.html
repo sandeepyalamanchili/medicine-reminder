@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#4F46E5">
+    <title>Medicine Reminder</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: system-ui, -apple-system, sans-serif; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <div id="app" class="p-4">
+        <div class="max-w-2xl mx-auto">
+            <!-- Header -->
+            <div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-indigo-600 p-3 rounded-xl">
+                            <svg class="text-white w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h1 class="text-2xl font-bold text-gray-800">Medicine Reminder</h1>
+                            <p class="text-sm text-gray-500">Never miss a dose</p>
+                        </div>
+                    </div>
+                    <button onclick="toggleAddForm()" class="bg-indigo-600 hover:bg-indigo-700 text-white p-3 rounded-xl transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Notification Permission -->
+                <div id="notif-banner" style="display: none;" class="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <div class="flex items-start gap-3">
+                        <svg class="text-yellow-600 w-5 h-5 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                        </svg>
+                        <div class="flex-1">
+                            <p class="text-sm text-yellow-800 font-medium">Enable Notifications</p>
+                            <p class="text-xs text-yellow-700 mt-1">Allow notifications to receive medicine reminders</p>
+                            <button onclick="requestNotifications()" class="mt-2 bg-yellow-600 hover:bg-yellow-700 text-white text-sm px-4 py-2 rounded-lg transition-colors">
+                                Enable Now
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add Medicine Form -->
+            <div id="add-form" style="display: none;" class="bg-white rounded-2xl shadow-lg p-6 mb-6">
+                <h2 class="text-lg font-semibold text-gray-800 mb-4">Add New Medicine</h2>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Medicine Name</label>
+                        <input type="text" id="med-name" placeholder="e.g., Aspirin" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Dosage</label>
+                        <input type="text" id="med-dosage" placeholder="e.g., 1 tablet, 5ml" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Reminder Times</label>
+                        <div id="time-slots"></div>
+                        <button onclick="addTimeSlot()" class="text-indigo-600 hover:text-indigo-700 text-sm font-medium mt-2">
+                            + Add Another Time
+                        </button>
+                    </div>
+
+                    <div class="flex gap-3 pt-2">
+                        <button onclick="saveMedicine()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-medium transition-colors">
+                            Add Medicine
+                        </button>
+                        <button onclick="toggleAddForm()" class="px-6 bg-gray-200 hover:bg-gray-300 text-gray-800 py-3 rounded-lg font-medium transition-colors">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Medicine List -->
+            <div id="medicine-list" class="space-y-4"></div>
+
+            <!-- Install Instructions -->
+            <div class="mt-8 bg-white rounded-2xl shadow-lg p-6">
+                <h3 class="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                    <svg class="text-green-600 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    Installation Instructions
+                </h3>
+                <div class="text-sm text-gray-600 space-y-2">
+                    <p><strong>Android Chrome:</strong> Tap menu (⋮) → "Add to Home screen"</p>
+                    <p><strong>iPhone Safari:</strong> Tap share → "Add to Home Screen"</p>
+                    <p class="text-xs text-gray-500 mt-3">Keep notifications enabled for timely reminders!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let medicines = [];
+        let times = ['09:00'];
+
+        // Load medicines on start
+        async function loadMedicines() {
+            try {
+                const result = await window.storage.get('medicines');
+                if (result && result.value) {
+                    medicines = JSON.parse(result.value);
+                    renderMedicines();
+                }
+            } catch (e) {
+                medicines = [];
+            }
+            checkNotificationPermission();
+            renderTimeSlots();
+        }
+
+        // Save medicines
+        async function saveMedicinesData() {
+            if (medicines.length > 0) {
+                await window.storage.set('medicines', JSON.stringify(medicines));
+            }
+        }
+
+        // Check notification permission
+        function checkNotificationPermission() {
+            if ('Notification' in window && Notification.permission !== 'granted') {
+                document.getElementById('notif-banner').style.display = 'block';
+            }
+        }
+
+        // Request notifications
+        async function requestNotifications() {
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted') {
+                document.getElementById('notif-banner').style.display = 'none';
+            }
+        }
+
+        // Toggle add form
+        function toggleAddForm() {
+            const form = document.getElementById('add-form');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+            if (form.style.display === 'block') {
+                document.getElementById('med-name').value = '';
+                document.getElementById('med-dosage').value = '';
+                times = ['09:00'];
+                renderTimeSlots();
+            }
+        }
+
+        // Render time slots
+        function renderTimeSlots() {
+            const container = document.getElementById('time-slots');
+            container.innerHTML = times.map((time, i) => `
+                <div class="flex gap-2 mb-2">
+                    <input type="time" value="${time}" onchange="updateTime(${i}, this.value)" class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                    ${times.length > 1 ? `<button onclick="removeTime(${i})" class="px-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors">🗑️</button>` : ''}
+                </div>
+            `).join('');
+        }
+
+        function addTimeSlot() {
+            times.push('09:00');
+            renderTimeSlots();
+        }
+
+        function updateTime(index, value) {
+            times[index] = value;
+        }
+
+        function removeTime(index) {
+            times = times.filter((_, i) => i !== index);
+            renderTimeSlots();
+        }
+
+        // Save medicine
+        async function saveMedicine() {
+            const name = document.getElementById('med-name').value.trim();
+            const dosage = document.getElementById('med-dosage').value.trim();
+            
+            if (!name || !dosage) {
+                alert('Please fill in medicine name and dosage');
+                return;
+            }
+
+            medicines.push({
+                id: Date.now(),
+                name,
+                dosage,
+                times: [...times]
+            });
+
+            await saveMedicinesData();
+            renderMedicines();
+            toggleAddForm();
+            scheduleReminders();
+        }
+
+        // Delete medicine
+        async function deleteMedicine(id) {
+            if (confirm('Delete this medicine?')) {
+                medicines = medicines.filter(m => m.id !== id);
+                if (medicines.length === 0) {
+                    await window.storage.delete('medicines');
+                } else {
+                    await saveMedicinesData();
+                }
+                renderMedicines();
+            }
+        }
+
+        // Render medicines
+        function renderMedicines() {
+            const container = document.getElementById('medicine-list');
+            
+            if (medicines.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-white rounded-2xl shadow-lg p-12 text-center">
+                        <svg class="mx-auto text-gray-300 w-12 h-12 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                        </svg>
+                        <p class="text-gray-500">No medicines added yet</p>
+                        <p class="text-sm text-gray-400 mt-2">Click the + button to add your first medicine</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = medicines.map(med => `
+                <div class="bg-white rounded-2xl shadow-lg p-6">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-800">${med.name}</h3>
+                            <p class="text-sm text-gray-600">${med.dosage}</p>
+                        </div>
+                        <button onclick="deleteMedicine(${med.id})" class="text-red-600 hover:bg-red-50 p-2 rounded-lg transition-colors">
+                            🗑️
+                        </button>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        ${med.times.map(time => `
+                            <div class="flex items-center gap-2 bg-indigo-50 text-indigo-700 px-3 py-2 rounded-lg">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                <span class="text-sm font-medium">${time}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Schedule reminders
+        function scheduleReminders() {
+            setInterval(() => {
+                const now = new Date();
+                const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+                
+                medicines.forEach(med => {
+                    med.times.forEach(time => {
+                        if (time === currentTime) {
+                            showNotification(med.name, med.dosage);
+                        }
+                    });
+                });
+            }, 60000); // Check every minute
+        }
+
+        // Show notification
+        function showNotification(name, dosage) {
+            if (Notification.permission === 'granted') {
+                new Notification('💊 Medicine Reminder', {
+                    body: `Time to take ${name} - ${dosage}`,
+                    icon: '💊',
+                    vibrate: [200, 100, 200],
+                    requireInteraction: true
+                });
+            }
+        }
+
+        // Initialize
+        window.addEventListener('load', () => {
+            loadMedicines();
+            scheduleReminders();
+        });
+    </script>
+</body>
+</html>
