@@ -113,25 +113,28 @@
         let medicines = [];
         let times = ['09:00'];
 
-        // Load medicines on start
-        async function loadMedicines() {
+        // Load medicines from localStorage
+        function loadMedicines() {
             try {
-                const result = await window.storage.get('medicines');
-                if (result && result.value) {
-                    medicines = JSON.parse(result.value);
-                    renderMedicines();
+                const saved = localStorage.getItem('medicines');
+                if (saved) {
+                    medicines = JSON.parse(saved);
                 }
             } catch (e) {
+                console.log('No saved data');
                 medicines = [];
             }
+            renderMedicines();
             checkNotificationPermission();
             renderTimeSlots();
         }
 
-        // Save medicines
-        async function saveMedicinesData() {
-            if (medicines.length > 0) {
-                await window.storage.set('medicines', JSON.stringify(medicines));
+        // Save medicines to localStorage
+        function saveMedicinesData() {
+            try {
+                localStorage.setItem('medicines', JSON.stringify(medicines));
+            } catch (e) {
+                console.error('Save failed:', e);
             }
         }
 
@@ -144,17 +147,24 @@
 
         // Request notifications
         async function requestNotifications() {
-            const permission = await Notification.requestPermission();
-            if (permission === 'granted') {
-                document.getElementById('notif-banner').style.display = 'none';
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    document.getElementById('notif-banner').style.display = 'none';
+                    alert('Notifications enabled! You will receive reminders at scheduled times.');
+                }
+            } catch (e) {
+                alert('Please enable notifications in your browser settings');
             }
         }
 
         // Toggle add form
         function toggleAddForm() {
             const form = document.getElementById('add-form');
-            form.style.display = form.style.display === 'none' ? 'block' : 'none';
-            if (form.style.display === 'block') {
+            const isHidden = form.style.display === 'none';
+            form.style.display = isHidden ? 'block' : 'none';
+            
+            if (isHidden) {
                 document.getElementById('med-name').value = '';
                 document.getElementById('med-dosage').value = '';
                 times = ['09:00'];
@@ -188,7 +198,7 @@
         }
 
         // Save medicine
-        async function saveMedicine() {
+        function saveMedicine() {
             const name = document.getElementById('med-name').value.trim();
             const dosage = document.getElementById('med-dosage').value.trim();
             
@@ -199,26 +209,22 @@
 
             medicines.push({
                 id: Date.now(),
-                name,
-                dosage,
+                name: name,
+                dosage: dosage,
                 times: [...times]
             });
 
-            await saveMedicinesData();
+            saveMedicinesData();
             renderMedicines();
             toggleAddForm();
-            scheduleReminders();
+            alert('Medicine added successfully!');
         }
 
         // Delete medicine
-        async function deleteMedicine(id) {
+        function deleteMedicine(id) {
             if (confirm('Delete this medicine?')) {
                 medicines = medicines.filter(m => m.id !== id);
-                if (medicines.length === 0) {
-                    await window.storage.delete('medicines');
-                } else {
-                    await saveMedicinesData();
-                }
+                saveMedicinesData();
                 renderMedicines();
             }
         }
@@ -248,7 +254,9 @@
                             <p class="text-sm text-gray-600">${med.dosage}</p>
                         </div>
                         <button onclick="deleteMedicine(${med.id})" class="text-red-600 hover:bg-red-50 p-2 rounded-lg transition-colors">
-                            🗑️
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
                         </button>
                     </div>
                     <div class="flex flex-wrap gap-2">
@@ -265,38 +273,48 @@
             `).join('');
         }
 
-        // Schedule reminders
-        function scheduleReminders() {
-            setInterval(() => {
-                const now = new Date();
-                const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-                
-                medicines.forEach(med => {
-                    med.times.forEach(time => {
-                        if (time === currentTime) {
-                            showNotification(med.name, med.dosage);
-                        }
-                    });
+        // Check reminders every minute
+        function checkReminders() {
+            const now = new Date();
+            const currentTime = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+            
+            medicines.forEach(med => {
+                med.times.forEach(time => {
+                    if (time === currentTime) {
+                        showNotification(med.name, med.dosage);
+                    }
                 });
-            }, 60000); // Check every minute
+            });
         }
 
         // Show notification
         function showNotification(name, dosage) {
-            if (Notification.permission === 'granted') {
-                new Notification('💊 Medicine Reminder', {
+            if ('Notification' in window && Notification.permission === 'granted') {
+                const notification = new Notification('💊 Medicine Reminder', {
                     body: `Time to take ${name} - ${dosage}`,
-                    icon: '💊',
+                    icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="%234F46E5"/><text x="50" y="65" font-size="50" text-anchor="middle" fill="white">💊</text></svg>',
                     vibrate: [200, 100, 200],
-                    requireInteraction: true
+                    requireInteraction: true,
+                    tag: name
                 });
+                
+                // Play sound
+                try {
+                    const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIGmi77eiYTRALUKXh8LdjHAU7k9jx1YMoBituveRiIgQLVLzm5rFeFgckjdXv0IEqBCl+zO/alDUIHm/A7OeeTRMNUqbj8LVjGwU8lNny1oMnByt1wOXlliECB1O96Oe1YhkFM43U79CAPgUIZLnn6KdYEwtVqOPxtWIdBTyU2fPYhzIHKnbD6OuiUxYKVa/n57dhGQU5kdfw0oI1Byd5y+/fnUsYElyx6OSsYBgEMo3V79F+OQYmfMvv35tKFhNXr+fms18XBTmR1+/RgDkFKHnN8N+cSxgTV7Dn6LJfGAY3kdb00IMwByh7zu/inEsWElKs5fC1YBgGNo/T79F9OwYle8zw4JxIGBNUruXwtWAZBTqP1PDSfz0HJ3zM8OCbSBcSVKzl8bZgGQU3jtPw0X47Bid8y/DgnEgYElSs5fC2YRkFO47U8NF+OwcmfMrw4JtJFxFTq+Xwt2AaBTuO0+/RfjsHJnzK8OCaSBcRU6vl8LdgGQU7jtLw0X88ByZ8yvDgmUgXEVOr5fC3YRoGO47S8NF+PAYnfMrw4JlJFxFTquXwtWEaBTuO0vDRfjwGJ3zK8OCaSBgRU6rl8LdhGgU7jtLw0X48Byd8yvDhmUkYEVOq5fC3YRoFO47S8NF+PAYmfMrw4JpJGBFTquXwt2EaBTuO0vDRfjwGJnzK8OCaSBgRU6rl8LdhGgU7jtLw0H48Bid8yvDgmkkYEVOq5fC3YRoFO47S8NB+PAYnfMrw4JpJGBFTquXwtmEaBTuO0vDQfzwGJ3zK8OCaSRgRU6rl8LZhGgU7jtLw0H48Bid8yvDgmkkYEVOq5fC2YRoFO47S8NB+PAYnfMrw4JpJGBFTquXwtmEaBTuO0vDQfjwGJ3zK8OCaSRgRU6rl8LZhGgU7jtLw0H48Bid8yvDgmkkYEVOq5fC2YRoFO47S8NB+PAYnfMrw4JpJGBFTquXwtmEaBTuO0vDQfjwGJ3zK8OCaSRgRU6rl8LZhGgU7jtLw0H48Bid8yvDgmkkYEVOq5fC2YRoFO47S8M9+PAYnfMrw4ZpJGBFTquXwtmEaBTuO0vDPfzwGJ3zK8OGaSRgRU6rl8LZhGgU7jtLwz348Bid8yvDhmkkYEVOq5fC2YRoFO47S8M9+PAYnfMrw4ZpJGBFTquXwtmEaBTuO0vDPfjwGJ3zK8OGaSRgRU6rl8LZhGgU7jtLwz348Bid8yvDhmkkYEVOq5fC1YRoFO47S8M9+PAYnfMrw4ZpJGBFTquXwtWEaBTuO0vDPfjwGJ3zK8OGaSRgRU6rl8LVhGgU7jtLwz348Bid8yvDhmkkYEVOq5fC1YRoFO47S8M9+PAYnfMrw4ZpJGBFTquXwtWEaBTuO0vDPfjwGJ3zK8OGaSRgQ==');
+                    audio.play().catch(e => console.log('Audio blocked'));
+                } catch (e) {
+                    console.log('Audio not available');
+                }
             }
         }
 
-        // Initialize
-        window.addEventListener('load', () => {
+        // Initialize on page load
+        window.addEventListener('load', function() {
             loadMedicines();
-            scheduleReminders();
+            // Check for reminders every minute
+            setInterval(checkReminders, 60000);
+            // Also check immediately
+            checkReminders();
         });
     </script>
 </body>
