@@ -1,0 +1,25 @@
+# Medicine Reminder System
+
+## 📌 Description
+A full-stack application that helps users manage and track their medicine schedules.
+
+## 🚀 Features
+- Add medicine reminders
+- Store data using SQLite
+- Simple user interface
+
+## 🛠 Tech Stack
+- Python (Flask)
+- HTML
+- SQLite
+
+## ▶️ How to Run
+
+1. Install dependencies:
+pip install -r requirements.txt
+
+2. Run backend:
+python app.py
+
+3. Open frontend:
+Open index.html in browser
