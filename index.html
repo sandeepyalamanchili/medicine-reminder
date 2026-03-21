@@ -479,7 +479,14 @@
 // ─────────────────────────────────────────────────────
 // Config & state
 // ─────────────────────────────────────────────────────
-const API_BASE = "http://localhost:5000/api";
+// Same origin as this page when served by Flask (works for localhost vs 127.0.0.1 and any port).
+// file:// fallback: opening index.html directly cannot use relative /api — use loopback + default port.
+const API_BASE = (() => {
+  const p = window.location.protocol;
+  const o = window.location.origin;
+  if (p === "file:" || o === "null" || !o) return "http://127.0.0.1:5000/api";
+  return `${o}/api`;
+})();
 
 let authToken      = sessionStorage.getItem("med_token")    || null;
 let authUsername   = sessionStorage.getItem("med_username") || null;
@@ -537,19 +544,44 @@ async function api(path, opts = {}) {
   showLoading(true);
   try {
     const headers = {"Content-Type": "application/json"};
-    if (authToken) headers["Authorization"] = "Bearer " + authToken;
-    const res  = await fetch(API_BASE + path, {
-      ...opts,
-      headers,
-      body: opts.body ? JSON.stringify(opts.body) : undefined
-    });
-    const data = await res.json();
+    const noAuth = path.startsWith("/auth/login") || path.startsWith("/auth/register");
+    if (authToken && !noAuth) headers["Authorization"] = "Bearer " + authToken;
+    let res;
+    try {
+      res = await fetch(API_BASE + path, {
+        ...opts,
+        headers,
+        body: opts.body ? JSON.stringify(opts.body) : undefined
+      });
+    } catch {
+      throw new Error(
+        "Cannot reach the server. Start the app with: MED_BASE_DIR=<project> python app.py — " +
+        "then open this app from that server (not as a file:// link). On macOS, port 5000 may be used by AirPlay; change the port in app.py if needed."
+      );
+    }
+    const text = await res.text();
+    let data = {};
+    if (text) {
+      try {
+        data = JSON.parse(text);
+      } catch {
+        if (!res.ok) {
+          throw new Error(
+            `Server returned non-JSON (${res.status}). Wrong process on this port? Try another port or disable AirPlay Receiver (macOS) if it uses port 5000.`
+          );
+        }
+        throw new Error("Invalid JSON from server");
+      }
+    }
+    // Login/register also use HTTP 401 for bad credentials — not a stale session.
     if (res.status === 401) {
-      // Token expired or invalid
+      if (noAuth) {
+        throw new Error(data.error || "Invalid username or password");
+      }
       doLogout(true);
       throw new Error("Session expired. Please log in again.");
     }
-    if (!res.ok) throw new Error(data.error || "API error");
+    if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
     return data;
   } finally { showLoading(false); }
 }

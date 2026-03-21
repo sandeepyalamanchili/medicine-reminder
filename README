@@ -16,10 +16,12 @@ A full-stack application that helps users manage and track their medicine schedu
 ## ▶️ How to Run
 
 1. Install dependencies:
-pip install -r requirements.txt
+pip install Flask Flask-CORS
 
-2. Run backend:
-python app.py
+2. From the project folder, set the app root (so the DB and index.html are found) and run:
+MED_BASE_DIR="$(pwd)" python app.py
 
-3. Open frontend:
-Open index.html in browser
+3. Open the app in the browser at the URL printed by Flask (e.g. http://127.0.0.1:5000).
+   Do not double-click index.html — the page must be served by Flask so the API works.
+
+Note: On macOS, AirPlay Receiver may use port 5000. If the server fails to start or signup fails with strange errors, change the port in app.py or turn off AirPlay Receiver in System Settings.

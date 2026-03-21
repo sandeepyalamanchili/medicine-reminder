@@ -3,6 +3,12 @@ __pycache__/
 *.pyc
 .env
 venv/
+.venv/
+
+# Local SQLite (dev)
+*.db
+*.db-shm
+*.db-wal
 
 # Frontend (Node)
 node_modules/
